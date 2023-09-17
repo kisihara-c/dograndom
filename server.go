@@ -3,7 +3,7 @@ package main
 import (
 	"net/http"
 	"io"
-	"fmt"
+	"encoding/json"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -36,10 +36,27 @@ func dog(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	
-  fmt.Printf(string(data))
-	return c.JSON(http.StatusOK, string(data))
 
-	// 画像を表示
-	// return c.File(http.StatusOK, file)
+	var jsonMap map[string]interface{}
+	err = json.Unmarshal([]byte(string(data)), &jsonMap)
+	if err != nil {
+		return err
+	}
+	
+	fileUrl := jsonMap["message"].(string)
+	
+	imageRes, err := http.Get(string(fileUrl))
+	if err != nil {
+		return err
+	}
+	defer imageRes.Body.Close()
+
+	c.Response().Header().Set(echo.HeaderContentType, "image/png")
+
+	_, err = io.Copy(c.Response(), imageRes.Body)
+	if err != nil {
+		return err
+	}
+	
+	return nil
 }
